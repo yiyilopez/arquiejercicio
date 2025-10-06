@@ -1,0 +1,21 @@
+{
+  "name": "arquiejercicio",
+  "version": "1.0.0",
+  "description": "Ejemplo de aplicación e-commerce con principios SOLID (TypeScript)",
+  "main": "dist/app.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "ts-node src/app.ts",
+    "start:build": "npm run build && node dist/app.js",
+    "lint": "echo 'No linter configurado'"
+  },
+  "keywords": ["solid", "arquitectura", "typescript", "ecommerce"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+  "@types/node": "^20.14.10",
+  "ts-node": "^10.9.2",
+  "typescript": "^5.4.5"
+  }
+}
