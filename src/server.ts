@@ -33,18 +33,18 @@ app.get("/api/products", (req: Request, res: Response) => {
 
 app.post("/api/checkout", async (req: Request, res: Response) => {
   try {
-    const { items, email, token } = req.body as { items: { productId: string; quantity: number }[]; email: string; token: string };
-    if (!Array.isArray(items) || !email || !token) return res.status(400).json({ error: "Parámetros inválidos" });
+    const { cart, email, paymentToken } = req.body as { cart: Record<string, number>; email: string; paymentToken: string };
+    if (!cart || !email || !paymentToken) return res.status(400).json({ error: "Parámetros inválidos" });
 
-    const cart = new Cart();
-    for (const it of items) {
-      const product = products.find(p => p.id === it.productId);
-      if (!product) return res.status(400).json({ error: `Producto no encontrado: ${it.productId}` });
-      cart.addItem(product, it.quantity);
+    const cartObj = new Cart();
+    for (const [productId, quantity] of Object.entries(cart)) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return res.status(400).json({ error: `Producto no encontrado: ${productId}` });
+      cartObj.addItem(product, quantity);
     }
 
     const checkout = new CheckoutService(pricing, payment, inventory, notifier);
-    const result = await checkout.checkout({ cart, customerEmail: email, paymentMethodToken: token });
+    const result = await checkout.checkout({ cart: cartObj, customerEmail: email, paymentMethodToken: paymentToken });
     res.json({ ok: true, ...result });
   } catch (err: any) {
     res.status(400).json({ ok: false, error: err.message });
