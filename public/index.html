@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>E-commerce SOLID</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 24px; }
+      header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+      .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
+      .card { border:1px solid #ddd; border-radius:8px; padding:12px; }
+      .cart { position: fixed; right: 24px; top: 24px; width: 320px; border: 1px solid #ddd; border-radius:8px; padding: 12px; background:#fff; max-height: 80vh; overflow:auto; }
+      button { cursor: pointer; }
+      .muted { color:#666; }
+      .total { font-weight:bold; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>E-commerce SOLID</h1>
+      <span class="muted">Demo</span>
+    </header>
+
+    <section>
+      <h2>Productos</h2>
+      <div id="products" class="grid"></div>
+    </section>
+
+    <aside class="cart">
+      <h3>Carrito</h3>
+      <div id="cartItems"></div>
+      <p class="total">Total estimado: <span id="total">0.00€</span></p>
+      <input id="email" type="email" placeholder="tu@email" />
+      <input id="token" type="text" placeholder="token de pago (demo)" />
+      <button id="checkoutBtn">Pagar</button>
+      <p id="msg" class="muted"></p>
+    </aside>
+
+    <script>
+      const fmt = c => (c/100).toFixed(2) + '€';
+      const state = { products: [], cart: {} };
+
+      async function loadProducts(){
+        const res = await fetch('/api/products');
+        state.products = await res.json();
+        const container = document.getElementById('products');
+        container.innerHTML = '';
+        state.products.forEach(p => {
+          const el = document.createElement('div');
+          el.className = 'card';
+          el.innerHTML = `<h4>${p.name}</h4><p class="muted">${fmt(p.priceCents)}</p><button>Agregar</button>`;
+          el.querySelector('button').onclick = () => addToCart(p.id);
+          container.appendChild(el);
+        });
+      }
+
+      function addToCart(id){
+        state.cart[id] = (state.cart[id]||0) + 1;
+        renderCart();
+      }
+
+      function removeFromCart(id){
+        delete state.cart[id];
+        renderCart();
+      }
+
+      function renderCart(){
+        const itemsEl = document.getElementById('cartItems');
+        itemsEl.innerHTML = '';
+        let total = 0;
+        Object.entries(state.cart).forEach(([id, qty]) => {
+          const p = state.products.find(x=>x.id===id);
+          if(!p) return;
+          const line = document.createElement('div');
+          const lineTotal = p.priceCents * qty;
+          total += lineTotal;
+          line.innerHTML = `${p.name} x${qty} — ${fmt(lineTotal)} <button data-id="${id}">Quitar</button>`;
+          line.querySelector('button').onclick = () => removeFromCart(id);
+          itemsEl.appendChild(line);
+        });
+        document.getElementById('total').textContent = fmt(total);
+      }
+
+      async function checkout(){
+        const email = document.getElementById('email').value || 'user@example.com';
+        const token = document.getElementById('token').value || 'tok_demo';
+        const items = Object.entries(state.cart).map(([productId, quantity]) => ({ productId, quantity }));
+        if(items.length===0){ setMsg('Carrito vacío'); return; }
+        setMsg('Procesando pago...');
+        const res = await fetch('/api/checkout', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ items, email, token })});
+        const data = await res.json();
+        if(res.ok && data.ok){
+          state.cart = {};
+          renderCart();
+          setMsg(`Pago ok: total ${(data.totalCents/100).toFixed(2)}€, tx ${data.transactionId}`);
+        } else {
+          setMsg('Error: ' + (data.error || 'desconocido'));
+        }
+      }
+
+      function setMsg(t){ document.getElementById('msg').textContent = t; }
+
+      document.getElementById('checkoutBtn').onclick = checkout;
+      loadProducts().then(renderCart);
+    </script>
+  </body>
+  </html>
